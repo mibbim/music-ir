@@ -7,10 +7,9 @@ import numpy as np
 from matplotlib import mlab
 
 from fingerprint import detect_peaks
-from hashing import hash_fanout_windows, \
-    select_fanout_windows_peaks_opt
+from hashing import hash_fanout_windows, select_fanout_windows_peaks
 
-SongID = int | None
+SongID = int | None | str
 Hash = Tuple[int, int, int]
 
 
@@ -35,7 +34,8 @@ class Corpus:
         raise NotImplementedError
 
     @abstractmethod
-    def recognize(self, input_signal: np.ndarray,
+    def recognize(self,
+                  input_signal: np.ndarray,
                   sample_rate: int,
                   n_matches_threshold: int = 10):
         raise NotImplementedError
@@ -60,8 +60,8 @@ class Corpus:
     def _get_hashes(self,
                     signal: np.ndarray,
                     sample_rate: int,
-                    song_id: int | None) -> Dict[Hash, Tuple[int, SongID]]:
+                    song_id: SongID) -> Dict[Hash, Tuple[int, SongID]]:
         db_spectrum = self._compute_db_spectrum(signal, sample_rate)
         peaks = detect_peaks(db_spectrum)
-        fan_win_data = select_fanout_windows_peaks_opt(peaks, fanout_window=self.fanout_window)
+        fan_win_data = select_fanout_windows_peaks(peaks, fanout_window=self.fanout_window)
         return hash_fanout_windows(fan_win_data, song_id)
