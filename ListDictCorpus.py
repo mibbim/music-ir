@@ -51,15 +51,15 @@ class ListDictCorpus(Corpus):
         :param hashes:
         :return: List of tuples (time_difference, song_id)
         """
-        raise NotImplementedError
-        # deltas = [((match[0] - t), match[1])
-        #           for hash_tuple, (t, _) in hashes.items()
-        #           if (match := self.corpus.get(hash_tuple, None))]
-        # return deltas
+        deltas = []
+        for hash_tuple, times in hashes.items():
+            for (t, _) in times:
+                if matches := self.corpus.get(hash_tuple, None):
+                    deltas.extend([(match[0] - t, match[1]) for match in matches])
+        return deltas
 
     def _retrieve_best_guess(self, matching_hashes: List[Tuple[int, SongID]],
                              ) -> Tuple[SongID, int, int]:
-
         try:
             champion = Counter(map(itemgetter(0), matching_hashes)).most_common(1)[0]
         except IndexError:
