@@ -8,6 +8,7 @@ from matplotlib import mlab
 
 from fingerprint import detect_peaks
 from hashing import hash_fanout_windows, select_fanout_windows_peaks
+from load_utils import load_mp3
 
 SongID = int | None | str
 Hash = Tuple[int, int, int]
@@ -60,8 +61,20 @@ class Corpus:
     def _get_hashes(self,
                     signal: np.ndarray,
                     sample_rate: int,
-                    song_id: SongID) -> Dict[Hash, Tuple[int, SongID]]:
+                    song_id: SongID = None) -> Dict[Hash, Tuple[int, SongID]]:
         db_spectrum = self._compute_db_spectrum(signal, sample_rate)
         peaks = detect_peaks(db_spectrum)
         fan_win_data = select_fanout_windows_peaks(peaks, fanout_window=self.fanout_window)
         return hash_fanout_windows(fan_win_data, song_id)
+
+
+def find_song(path: PosixPath, corpus: Corpus, seconds=3, verbose=False):
+    signal, sr = load_mp3(path)
+    start = np.random.randint(0, signal.shape[0] - sr * seconds)  # 200
+    recognized = corpus.recognize(signal[start: start + sr * seconds], sr)
+    if verbose:
+        print(recognized)
+
+
+if __name__ == "__main__":
+    pass
