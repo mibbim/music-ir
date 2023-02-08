@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from pathlib import PosixPath
+from pathlib import PosixPath, Path
 from typing import Dict, Tuple
 
 import librosa
@@ -68,7 +68,7 @@ class Corpus:
         return hash_fanout_windows(fan_win_data, song_id)
 
 
-def find_song(path: PosixPath, corpus: Corpus, seconds=3, verbose=False):
+def find_song(path: Path, corpus: Corpus, seconds=3, verbose=False):
     signal, sr = load_mp3(path)
     start = np.random.randint(0, signal.shape[0] - sr * seconds)  # 200
     recognized = corpus.recognize(signal[start: start + sr * seconds], sr)
