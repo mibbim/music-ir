@@ -23,11 +23,11 @@ def handle_stereo_signal(signal: np.ndarray) -> np.ndarray:
 class Corpus:
     def __init__(self,
                  fanout_window: int = 10,
-                 wsize: int = 4086,
-                 wratio: float = 0.5
+                 spec_window_size: int = 4086,
+                 spec_window_overlap_ratio: float = 0.5
                  ):
-        self.spec_window_size = wsize
-        self.spec_window_overlap_ratio = wratio
+        self.spec_window_size = spec_window_size
+        self.spec_window_overlap_ratio = spec_window_overlap_ratio
         self.fanout_window = fanout_window
 
     @abstractmethod
