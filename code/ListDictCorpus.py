@@ -284,7 +284,7 @@ def get_fisrt_30_ld_corpora(skip_existing=True):
     :param skip_existing: Whether to skip existing corpora or not.
     :return: Merged ListDictCorpus instance.
     """
-    file_path = Path("first_30_corpora.pickle")
+    file_path = Path("../first_30_corpora.pickle")
 
     if file_path.exists() and skip_existing:
         with open(file_path, "rb") as f:
@@ -331,7 +331,7 @@ if __name__ == "__main__":
 
     def select_random_song(folders=None) -> Path:
         if folders is None:
-            folders = os.listdir("data")
+            folders = os.listdir("../data")
         import random
         folder = random.choice(folders)
         if folder.endswith(".zip") or folder.startswith("."):

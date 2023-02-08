@@ -75,7 +75,7 @@ class PandasCorpus(Corpus):
 
 if __name__ == '__main__':
     corpus = PandasCorpus()
-    folder_path = Path('data/000')
+    folder_path = Path('../data/000')
 
     corpus_file = Path("corpus_pd_0_5.pickle")
 
@@ -90,5 +90,5 @@ if __name__ == '__main__':
             pickle.dump(corpus, f)
 
     for i in range(20):
-        find_song(PosixPath("data/000/000190.mp3"), corpus)
+        find_song(PosixPath("../data/000/000190.mp3"), corpus)
     print()
