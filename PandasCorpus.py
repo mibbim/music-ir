@@ -14,9 +14,9 @@ from load_utils import load_mp3
 class PandasCorpus(Corpus):
     def __init__(self,
                  fanout_window: int = 10,
-                 wsize: int = 4086,
-                 wratio: float = 0.5):
-        super().__init__(fanout_window, wsize, wratio)
+                 spec_window_size: int = 4086,
+                 spec_window_overlap_ratio: float = 0.5):
+        super().__init__(fanout_window, spec_window_size, spec_window_overlap_ratio)
         self.corpus = pd.DataFrame(columns=['song_id', 'time'])
 
     @staticmethod
