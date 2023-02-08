@@ -26,8 +26,8 @@ class Corpus:
                  wsize: int = 4086,
                  wratio: float = 0.5
                  ):
-        self.wsize = wsize
-        self.wratio = wratio
+        self.spec_window_size = wsize
+        self.spec_window_overlap_ratio = wratio
         self.fanout_window = fanout_window
 
     @abstractmethod
@@ -51,10 +51,10 @@ class Corpus:
                              sr: int) -> np.ndarray:
         spectrum, frequencies, time = mlab.specgram(
             signal,
-            NFFT=self.wsize,
+            NFFT=self.spec_window_size,
             Fs=sr,
             window=mlab.window_hanning,
-            noverlap=int(self.wsize * self.wratio)
+            noverlap=int(self.spec_window_size * self.spec_window_overlap_ratio)
         )
         return librosa.power_to_db(spectrum, ref=np.max)
 
@@ -74,6 +74,7 @@ def find_song(path: PosixPath, corpus: Corpus, seconds=3, verbose=False):
     recognized = corpus.recognize(signal[start: start + sr * seconds], sr)
     if verbose:
         print(recognized)
+    return recognized
 
 
 if __name__ == "__main__":
