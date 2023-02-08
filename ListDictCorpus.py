@@ -17,31 +17,47 @@ TOT_HASHES = 0
 
 class ListDictCorpus(Corpus):
     """
-    This implementation uses a dictionary to store the hashes.
-    It is however not working properly because of the high number of conflicts in hashes
-    that result in hashes overwriting.
-    In order to work properly, the dictionary should use as values a list of values
-    instead of a single values.
+    ListDictCorpus
+
+    A subclass of Corpus for storing and searching for audio fingerprints in a dictionary of list
+    data structure.
+
+    Attributes:
+    corpus (ListDict[Hash, List[Tuple[int, SongID]]]): The hash map of audio fingerprints and their
+    corresponding timestamps and song IDs.
+    song_ids (List[SongID]): List of song IDs.
+    song_paths (Dict[SongID, PosixPath]): Dictionary mapping song IDs to file paths.
+
     """
 
     def __init__(self,
                  fanout_window: int = 10,
-                 wsize: int = 4086,
-                 wratio: float = 0.5):
-        super().__init__(fanout_window, wsize, wratio)
+                 spec_window_size: int = 4086,
+                 spec_window_overlap_ratio: float = 0.5):
+        """
+        Initialize the `ListDictCorpus` object.
+
+        :param fanout_window: (optional) the size of the time window of each peak constellation.
+        :type fanout_window: int, optional
+        :param spec_window_size: (optional) the window size to use in the spectrogram creation.
+        :type spec_window_size: int, optional
+        :param spec_window_overlap_ratio: (optional) the weight ratio to use in the hashing process.
+        :type spec_window_overlap_ratio: float, optional
+        """
+        super().__init__(fanout_window, spec_window_size, spec_window_overlap_ratio)
         self.corpus: ListDict[Hash, List[Tuple[int, SongID]]] = ListDict()
         self.song_ids = []
         self.song_paths: Dict[SongID, PosixPath] = {}
 
     def add_song(self, filepath: PosixPath):
-        global TOT_HASHES
+        # global TOT_HASHES
         song_id = len(self.song_ids)
         self.song_ids.append(song_id)
         self.song_paths[song_id] = filepath
         signal, sample_rate = load_mp3(filepath)
         signal = self._preprocess_signal(signal)  # stereo to mono conversion
         hashes = self._get_hashes(signal, sample_rate, song_id)
-        TOT_HASHES += len(hashes)
+        # TOT_HASHES += len(hashes)
         self.corpus.update(hashes)
         return
 
@@ -91,28 +107,60 @@ class ListDictCorpus(Corpus):
         matching_confidence = n_matches / len(input_hashes)
         return self.song_paths[song_id], matching_confidence, alignment
 
+    def merge(self, other_corpus):
+        self.corpus.update(other_corpus.corpus)
+        present_tracks = len(self.song_ids)
+        self.song_ids.extend([si + present_tracks for si in other_corpus.song_ids])
+        self.song_paths.update(
+            {si + present_tracks: p for si, p in other_corpus.song_paths.items()})
+
 
 if __name__ == "__main__":
     import pickle
     from pathlib import Path
     import os
-    from tqdm import tqdm
     from Corpus import find_song
 
-    corpus_file = Path("corpus_0_ld.pickle")
+    # corpus_file = Path("corpus_0_ld.pickle")
+    # all_corpora = ListDictCorpus()
+    # for i in tqdm(range(31), desc="Corpora", position=0):
+    #     corpus_file = Path(f"corpus_{i}_ld.pickle")
+    #
+    #     try:
+    #         with open(corpus_file, "rb") as f:
+    #             corpus = pickle.load(f)
+    #
+    #     except FileNotFoundError:
+    #         print(f"Corpus {corpus_file} not found, creating new one...")
+    #         corpus = ListDictCorpus()
+    #         folder_path = Path(f'data/{i:03d}')
+    #
+    #         for path in tqdm(os.listdir(folder_path), leave=False, desc=f"Corpus {i}", position=1):
+    #             corpus.add_song(folder_path / path)
+    #         # print(TOT_HASHES, sum([len(v) for v in corpus.corpus.values()]))
+    #         with open(corpus_file, "wb") as f:
+    #             pickle.dump(corpus, f)
+    #
+    #     all_corpora.merge(corpus)
 
-    try:
-        with open(corpus_file, "rb") as f:
-            corpus = pickle.load(f)
-    except FileNotFoundError:
-        print("Corpus not found, creating new one...")
-        corpus = ListDictCorpus()
-        folder_path = Path('data/000')
-        for path in tqdm(os.listdir(folder_path)):
-            corpus.add_song(folder_path / path)
-        print(TOT_HASHES, sum([len(v) for v in corpus.corpus.values()]))
-        with open(corpus_file, "wb") as f:
-            pickle.dump(corpus, f)
+    # with open("first_30_corpora.pickle", "wb") as f:
+    #     pickle.dump(all_corpora, f)
+
+    with open("first_30_corpora.pickle", "rb") as f:
+        all_corpora = pickle.load(f)
+
+
+    def select_random_song() -> Path:
+        import random
+        folder = random.choice(os.listdir("data"))
+        if folder.endswith(".zip"):
+            return select_random_song()
+        song = random.choice(os.listdir(f"data/{folder}"))
+        return Path(f"data/{folder}/{song}")
+
 
     for i in range(100):
-        find_song(PosixPath("data/000/000190.mp3"), corpus, verbose=True)
+        random_song = select_random_song()
+        recognized, _, _ = find_song(random_song, all_corpora, verbose=True)
+        if random_song != recognized:
+            print("Wrong song recognized!")
