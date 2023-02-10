@@ -8,6 +8,7 @@ from tqdm import tqdm
 
 from Corpus import Corpus, Hash, SongID
 from ListDict import ListDict
+from code.test_utils import select_random_song
 from fingerprint import detect_peaks
 from hashing import select_fanout_windows_peaks, hash_fanout_windows_listdict
 from load_utils import load_mp3
@@ -277,7 +278,7 @@ def test_merge():
     assert c1.song_paths == expected_song_paths
 
 
-def get_fisrt_30_ld_corpora(skip_existing=True):
+def get_first_30_ld_corpora(skip_existing=True):
     """
     Retrieve the first 30 ListDictCorpora and merge them into a single one.
 
@@ -320,25 +321,12 @@ def get_fisrt_30_ld_corpora(skip_existing=True):
 if __name__ == "__main__":
     import pickle
     from pathlib import Path
-    import os
     from Corpus import find_song
 
     test_merge()
 
     create_30_ld_corpora(skip_existing=True)
-    all_corpora = get_fisrt_30_ld_corpora(skip_existing=True)
-
-
-    def select_random_song(folders=None) -> Path:
-        if folders is None:
-            folders = os.listdir("../data")
-        import random
-        folder = random.choice(folders)
-        if folder.endswith(".zip") or folder.startswith("."):
-            return select_random_song()
-        song = random.choice(os.listdir(f"data/{folder}"))
-        return Path(f"data/{folder}/{song}")
-
+    all_corpora = get_first_30_ld_corpora(skip_existing=True)
 
     for i in range(100):
         random_song = select_random_song()
