@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 from Corpus import Corpus, Hash, SongID
 from ListDict import ListDict
-from code.test_utils import select_random_song
+from source.test_utils import select_random_song
 from fingerprint import detect_peaks
 from hashing import select_fanout_windows_peaks, hash_fanout_windows_listdict
 from load_utils import load_mp3
