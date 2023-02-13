@@ -1,17 +1,19 @@
 from collections import Counter
 from operator import itemgetter
-from pathlib import PosixPath
+from pathlib import PosixPath, Path
 from typing import Tuple, List, Dict
 
 import numpy as np
 from tqdm import tqdm
+import pickle
+
 
 from Corpus import Corpus, Hash, SongID
 from ListDict import ListDict
-from source.test_utils import select_random_song
 from fingerprint import detect_peaks
 from hashing import select_fanout_windows_peaks, hash_fanout_windows_listdict
 from load_utils import load_mp3
+from source.test_utils import select_random_song
 
 
 class ListDictCorpus(Corpus):
@@ -146,7 +148,8 @@ class ListDictCorpus(Corpus):
                   sample_rate: int,
                   n_matches_threshold: int = 10) -> Tuple[PosixPath | None, float, int]:
 
-        """Recognize the song from an audio signal.
+        """
+        Recognize the song from an audio signal.
 
         Args:
             input_signal (array-like): The audio signal to be recognized.
@@ -237,7 +240,7 @@ def create_30_ld_corpora(skip_existing: bool = True):
 
         print(f"Corpus {corpus_file} not found, creating new one...")
         corpus = ListDictCorpus()
-        folder_path = Path(f'data/{i:03d}')
+        folder_path = Path(f'data/fma_small/{i:03d}')
 
         for song_path in tqdm(folder_path.iterdir(), desc=f"Folder {i:03d}", position=1):
             corpus.add_song(song_path)
@@ -319,8 +322,6 @@ def get_first_30_ld_corpora(skip_existing=True):
 
 
 if __name__ == "__main__":
-    import pickle
-    from pathlib import Path
     from Corpus import find_song
 
     test_merge()
