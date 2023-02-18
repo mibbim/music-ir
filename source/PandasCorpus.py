@@ -1,7 +1,7 @@
 import os
 import pickle
 from pathlib import Path, PosixPath
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 
 import numpy as np
 import pandas as pd
@@ -12,12 +12,27 @@ from load_utils import load_mp3
 
 
 class PandasCorpus(Corpus):
+    """
+    A corpus that uses a Pandas DataFrame to store the hashes.
+    Note: This implementation is not optimized for speed.
+
+    """
+
     def __init__(self,
                  fanout_window: int = 10,
                  spec_window_size: int = 4086,
                  spec_window_overlap_ratio: float = 0.5):
         super().__init__(fanout_window, spec_window_size, spec_window_overlap_ratio)
-        self.corpus = pd.DataFrame(columns=['song_id', 'time'])
+        self._corpus = pd.DataFrame(columns=['song_id', 'time'])
+        raise NotImplementedError
+
+    @property
+    def song_ids(self) -> List[SongID]:
+        return self._corpus['song_id']
+
+    @property
+    def corpus(self) -> pd.DataFrame:
+        return self._corpus
 
     @staticmethod
     def dict_to_corpus(hashes: Dict[Hash, Tuple[int, SongID]]) -> pd.DataFrame:
@@ -30,8 +45,8 @@ class PandasCorpus(Corpus):
         signal, sample_rate = load_mp3(song_path)
         signal = self._preprocess_signal(signal)
         hashes = self._get_hashes(signal, sample_rate, song_id)
-        self.corpus = pd.concat(
-            (self.corpus, self.dict_to_corpus(hashes)))
+        self._corpus = pd.concat(
+            (self._corpus, self.dict_to_corpus(hashes)))
 
     def _get_matches(self, hashes: Dict[Hash, Tuple[int, SongID]]) -> pd.DataFrame:
         """
@@ -39,8 +54,8 @@ class PandasCorpus(Corpus):
         :param hashes:
         :return: Df of tuples (time_difference, song_id)
         """
-        matches = self.corpus.loc[
-            self.corpus.index.intersection(hashes.keys())]  # Returns a copy, not a view
+        matches = self._corpus.loc[
+            self._corpus.index.intersection(hashes.keys())]  # Returns a copy, not a view
         matches.loc[:, "time"] -= [hashes[i][0] for i in matches.index]
         matches.columns = ['song_id', 'time_diff', ]
         return matches  # deltas

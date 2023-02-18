@@ -3,8 +3,8 @@ from typing import List, Dict, Tuple, Any
 
 import numpy as np
 
-from ListDict import ListDict
-from fingerprint import get_peak_coordinates
+from source.ListDict import ListDict
+from source.fingerprint import get_peak_coordinates
 
 Anchorpoint_data = namedtuple('Anchorpoint_data', ["constallation", "frequencies", "time"])
 Star = namedtuple('Star', ["frequency", "time"])

@@ -4,16 +4,14 @@ from pathlib import PosixPath, Path
 from typing import Tuple, List, Dict
 
 import numpy as np
-from tqdm import tqdm
-import pickle
 
+from source.Corpus import Corpus, Hash, SongID
+from source.ListDict import ListDict
+from source.fingerprint import detect_peaks
+from source.hashing import select_fanout_windows_peaks, hash_fanout_windows_listdict
+from source.load_utils import load_mp3
 
-from Corpus import Corpus, Hash, SongID
-from ListDict import ListDict
-from fingerprint import detect_peaks
-from hashing import select_fanout_windows_peaks, hash_fanout_windows_listdict
-from load_utils import load_mp3
-from source.test_utils import select_random_song
+root_path = Path(__file__).parent.parent
 
 
 class ListDictCorpus(Corpus):
@@ -33,8 +31,8 @@ class ListDictCorpus(Corpus):
 
     def __init__(self,
                  fanout_window: int = 10,
-                 spec_window_size: int = 4086,
-                 spec_window_overlap_ratio: float = 0.5):
+                 spec_window_size: int = 1024,
+                 spec_window_overlap_ratio: float = 0.7):
         """
         Initialize the `ListDictCorpus` object.
 
@@ -42,13 +40,22 @@ class ListDictCorpus(Corpus):
         :type fanout_window: int, optional
         :param spec_window_size: (optional) the window size to use in the spectrogram creation.
         :type spec_window_size: int, optional
-        :param spec_window_overlap_ratio: (optional) the weight ratio to use in the hashing process.
+        :param spec_window_overlap_ratio: (optional) the overlap ratio to use in the hashing process.
+                if 0.5 then the windows will overlap by half.
         :type spec_window_overlap_ratio: float, optional
         """
         super().__init__(fanout_window, spec_window_size, spec_window_overlap_ratio)
-        self.corpus: ListDict[Hash, List[Tuple[int, SongID]]] = ListDict()
-        self.song_ids = []
+        self._corpus: ListDict[Hash, List[Tuple[int, SongID]]] = ListDict()
+        self._song_ids = []
         self.song_paths: Dict[SongID, PosixPath] = {}
+
+    @property
+    def corpus(self) -> ListDict[Hash, List[Tuple[int, SongID]]]:
+        return self._corpus
+
+    @property
+    def song_ids(self) -> List[SongID]:
+        return self._song_ids
 
     def add_song(self, filepath: PosixPath):
         """
@@ -58,13 +65,13 @@ class ListDictCorpus(Corpus):
         :type filepath: PosixPath
         :return: None
         """
-        song_id = len(self.song_ids)
-        self.song_ids.append(song_id)
+        song_id = len(self._song_ids)
+        self._song_ids.append(song_id)
         self.song_paths[song_id] = filepath
         signal, sample_rate = load_mp3(filepath)
         signal = self._preprocess_signal(signal)  # stereo to mono conversion
         hashes = self._get_hashes(signal, sample_rate, song_id)
-        self.corpus.update(hashes)
+        self._corpus.update(hashes)
 
     def _get_matches(self, hashes: ListDict) -> List[Tuple[int, SongID]]:
         """
@@ -188,8 +195,8 @@ class ListDictCorpus(Corpus):
         :rtype: Tuple[ListDict[Hash, List[Tuple[int, SongID]]], List[SongID], Dict[SongID, PosixPath]]
         """
         corpus = ListDict(
-            {k: [(t, si + offset) for t, si in v] for k, v in self.corpus.items()})
-        song_ids = [si + offset for si in self.song_ids]
+            {k: [(t, si + offset) for t, si in v] for k, v in self._corpus.items()})
+        song_ids = [si + offset for si in self._song_ids]
         song_paths = {si + offset: p for si, p in self.song_paths.items()}
         return corpus, song_ids, song_paths
 
@@ -205,65 +212,29 @@ class ListDictCorpus(Corpus):
         Returns:
             None: The method modifies the current corpus in place, no new instance is created.
         """
-        offset = len(self.song_ids)
+        offset = len(self._song_ids)
         c, ids, paths = other_corpus.get_attributes_with_song_id_offset(offset)
 
-        self.corpus.update(c)
-        self.song_ids.extend(ids)
+        self._corpus.update(c)
+        self._song_ids.extend(ids)
         self.song_paths.update(paths)
-
-
-def create_30_ld_corpora(skip_existing: bool = True):
-    """
-    Creates 30 `ListDictCorpus` objects, one for each of the 30 folders in the `data` directory.
-
-    This function loops through each folder in the `data` directory and adds the songs in the folder to a
-    `ListDictCorpus` object. The resulting `ListDictCorpus` objects are then pickled and saved to a file
-    with the name `corpus_{i}_ld.pickle`, where `i` is the number of the folder. If the `skip_existing`
-    parameter is set to `True` (default), the function will skip creating a `ListDictCorpus` object for a
-    folder if a pickled file with the corresponding name already exists.
-
-    It may be useful to run this function once to create the pickled corpora, and then use the pickled
-    corpora in subsequent runs of the program. This will save time, as the pickling process can take
-    several minutes.
-
-    :param skip_existing: If set to `True`, the function will skip creating a `ListDictCorpus` object for a
-    folder if a pickled file with the corresponding name already exists.
-    :type skip_existing: bool, optional
-    """
-    for i in tqdm(range(31), desc="Corpora", position=0):
-        corpus_file = Path(f"corpus_{i}_ld.pickle")
-
-        if skip_existing and corpus_file.exists():
-            print(f"Corpus {corpus_file} already exists, skipping...")
-            continue
-
-        print(f"Corpus {corpus_file} not found, creating new one...")
-        corpus = ListDictCorpus()
-        folder_path = Path(f'data/fma_small/{i:03d}')
-
-        for song_path in tqdm(folder_path.iterdir(), desc=f"Folder {i:03d}", position=1):
-            corpus.add_song(song_path)
-
-        with open(corpus_file, "wb") as f:
-            pickle.dump(corpus, f)
 
 
 def test_merge():
     c1 = ListDictCorpus()
-    c1.corpus = ListDict(
+    c1._corpus = ListDict(
         {(944, 478, 1): [(0, 0)],
          (1486, 478, 1): [(0, 1)]}
     )
-    c1.song_ids = [0, 1]
+    c1._song_ids = [0, 1]
     c1.song_paths = {0: Path("data/000/000000.mp3"),
                      1: Path("data/000/000001.mp3")}
     c2 = ListDictCorpus()
-    c2.corpus = ListDict({
+    c2._corpus = ListDict({
         (9440, 4780, 10): [(0, 10)],
         (14860, 4780, 10): [(0, 1)]
     })
-    c2.song_ids = [0, 10]
+    c2._song_ids = [0, 10]
     c2.song_paths = {0: Path("data/001/000000.mp3"),
                      10: Path("data/001/000001.mp3")}
     c1.merge(c2)
@@ -271,9 +242,9 @@ def test_merge():
                                 (1486, 478, 1): [(0, 1)],
                                 (9440, 4780, 10): [(0, 12)],
                                 (14860, 4780, 10): [(0, 3)]})
-    assert c1.corpus == expected_corpus
+    assert c1._corpus == expected_corpus
     expected_song_ids = [0, 1, 2, 12]
-    assert c1.song_ids == expected_song_ids
+    assert c1._song_ids == expected_song_ids
     expected_song_paths = {0: Path("data/000/000000.mp3"),
                            1: Path("data/000/000001.mp3"),
                            2: Path("data/001/000000.mp3"),
@@ -281,56 +252,5 @@ def test_merge():
     assert c1.song_paths == expected_song_paths
 
 
-def get_first_30_ld_corpora(skip_existing=True):
-    """
-    Retrieve the first 30 ListDictCorpora and merge them into a single one.
-
-    :param skip_existing: Whether to skip existing corpora or not.
-    :return: Merged ListDictCorpus instance.
-    """
-    file_path = Path("../first_30_corpora.pickle")
-
-    if file_path.exists() and skip_existing:
-        with open(file_path, "rb") as f:
-            return pickle.load(f)
-
-    all_corpora = ListDictCorpus()
-
-    for i in tqdm(range(31), desc="Corpora", position=0):
-        corpus_file = Path(f"corpus_{i}_ld.pickle")
-
-        if skip_existing and corpus_file.exists():
-            print(f"Corpus {corpus_file} already exists, skipping...")
-            corpus = pickle.load(open(corpus_file, "rb"))
-
-        else:
-            print(f"Corpus {corpus_file} not found, creating new one...")
-            corpus = ListDictCorpus()
-            folder_path = Path(f'data/{i:03d}')
-
-            for song_path in tqdm(folder_path.iterdir(), desc=f"Folder {i:03d}", position=1):
-                corpus.add_song(song_path)
-
-            with open(corpus_file, "wb") as f:
-                pickle.dump(corpus, f)
-
-        all_corpora.merge(corpus)
-
-    with open(file_path, "wb") as f:
-        pickle.dump(all_corpora, f)
-    return all_corpora
-
-
 if __name__ == "__main__":
-    from Corpus import find_song
-
-    test_merge()
-
-    create_30_ld_corpora(skip_existing=True)
-    all_corpora = get_first_30_ld_corpora(skip_existing=True)
-
-    for i in range(100):
-        random_song = select_random_song()
-        recognized, _, _ = find_song(random_song, all_corpora, verbose=True)
-        if random_song != recognized:
-            print("Wrong song recognized!")
+    pass

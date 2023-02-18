@@ -1,14 +1,14 @@
 from abc import abstractmethod
 from pathlib import PosixPath, Path
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 
 import librosa
 import numpy as np
 from matplotlib import mlab
 
-from fingerprint import detect_peaks
-from hashing import hash_fanout_windows, select_fanout_windows_peaks
-from load_utils import load_mp3
+from source.fingerprint import detect_peaks
+from source.hashing import hash_fanout_windows, select_fanout_windows_peaks
+from source.load_utils import load_mp3
 
 SongID = int | None | str
 Hash = Tuple[int, int, int]
@@ -38,12 +38,20 @@ class Corpus:
         :type fanout_window: int, optional
         :param spec_window_size: (optional) the window size to use in the spectrogram creation.
         :type spec_window_size: int, optional
-        :param spec_window_overlap_ratio: (optional) the weight ratio to use in the hashing process.
+        :param spec_window_overlap_ratio: (optional) the overlap ratio to use in the hashing process.
         :type spec_window_overlap_ratio: float, optional
         """
         self.spec_window_size = spec_window_size
         self.spec_window_overlap_ratio = spec_window_overlap_ratio
         self.fanout_window = fanout_window
+
+    @property
+    def song_ids(self) -> List[SongID]:
+        raise NotImplementedError
+
+    @property
+    def corpus(self) -> Dict[Hash, Tuple[int, SongID]]:
+        raise NotImplementedError
 
     @abstractmethod
     def add_song(self, filepath: PosixPath):
@@ -127,6 +135,20 @@ class Corpus:
         peaks = detect_peaks(db_spectrum)
         fan_win_data = select_fanout_windows_peaks(peaks, fanout_window=self.fanout_window)
         return hash_fanout_windows(fan_win_data, song_id)
+
+    def info(self):
+        """
+        Returns a formatted string with some statistics about the corpus.
+        """
+        result = f"""
+    30 Folder courpus
+    number of songs: {len(self.song_ids)}
+    number of hashes: {len(self.corpus)}
+    average anchor point per hash: {np.mean([len(l) for l in self.corpus.values()])}
+    max anchor point per hash: {np.max([len(l) for l in self.corpus.values()])}
+    max anchor point per hash: {np.min([len(l) for l in self.corpus.values()])}
+"""
+        return result
 
 
 def find_song(path: Path, corpus: Corpus, seconds=3, verbose=False):
