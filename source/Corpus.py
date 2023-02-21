@@ -140,13 +140,13 @@ class Corpus:
         """
         Returns a formatted string with some statistics about the corpus.
         """
+        lens = [len(l) for l in self.corpus.values()]
         result = f"""
-    30 Folder courpus
     number of songs: {len(self.song_ids)}
     number of hashes: {len(self.corpus)}
     average anchor point per hash: {np.mean([len(l) for l in self.corpus.values()])}
     max anchor point per hash: {np.max([len(l) for l in self.corpus.values()])}
-    max anchor point per hash: {np.min([len(l) for l in self.corpus.values()])}
+    min anchor point per hash: {np.min([len(l) for l in self.corpus.values()])}
 """
         return result
 
