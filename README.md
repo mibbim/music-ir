@@ -11,3 +11,7 @@ An Audio Information Retrieval Tool
 
 - Fix PadasCorpus
 - [ ] make consistent interface
+
+- Improve Robusteness
+- [ ] Merge near matches
+- [ ] When not retrieved, try to add an offset to the query signal
