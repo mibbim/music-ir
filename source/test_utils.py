@@ -108,7 +108,7 @@ def get_first_30_ld_corpora(skip_existing=True, verbose=1, *args, **kwargs):
     return all_corpora
 
 
-def test_for_ListDict_Corpus():
+def test_for_listdict_corpus():
     from Corpus import find_song
 
     test_merge()
@@ -129,4 +129,4 @@ def test_for_ListDict_Corpus():
 
 if __name__ == '__main__':
     # print(select_random_song())
-    test_for_ListDict_Corpus()
+    test_for_listdict_corpus()
